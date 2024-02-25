@@ -9,66 +9,53 @@ const Saldo = require("../models/saldo");
 class SaidaItemService {
   async createSaidaItem(saidaItem) {
     try {
-      if (isNaN(saidaItem.produtoId)) {
-        const produto = await Produto.findOne({
-          where: { descricao: saidaItem.produtoId },
-        });
-        if (!produto) {
-          throw new Error(
-            `Produto com descrição ${saidaItem.produtoId} não encontrado.`
-          );
-        }
-        saidaItem.produtoId = produto.id;
-      }
-
-      const newSaidaItem = await SaidaItem.create(saidaItem);
-
-      // Atualiza o saldo no estoque e cria ou atualiza uma entrada na tabela Saldo
+      const createdSaidaItem = await SaidaItem.create(saidaItem);
       await this.atualizarSaldo(
         saidaItem.produtoId,
         saidaItem.estoqueId,
-        saidaItem.quantidade
+        saidaItem.subestoqueId,
+        parseFloat(saidaItem.quantidade),
       );
-
-      return newSaidaItem;
+      return createdSaidaItem;
     } catch (error) {
       console.error(error);
       throw new Error(error.message);
     }
   }
 
-  async atualizarSaldo(produtoId, estoqueId, quantidade) {
+  async atualizarSaldo(produtoId, estoqueId, subestoqueId, quantidade) {
     try {
-      // Verifica se já existe um saldo para o produto no estoque
-      const saldo = await Saldo.findOne({ where: { produtoId, estoqueId } });
+      const saldo = await Saldo.findOne({
+        where: {
+          produtoId: produtoId,
+          estoqueId: estoqueId,
+          subestoqueId: subestoqueId,
+        },
+      });
 
       if (saldo) {
-        // Se já existe um saldo, atualiza a quantidade existente
-        await Saldo.update(
-          {
-            quantidade: saldo.quantidade - quantidade,
-            saldo: Sequelize.literal(`saldo - ${quantidade}`),
-          },
-          { where: { produtoId, estoqueId } }
-        );
+        console.log("Saldo encontrado:", saldo);
+
+        // Verifica se a quantidade é um número válido
+        if (!isNaN(quantidade)) {
+          saldo.saldo -= quantidade;
+          await saldo.save();
+          console.log("Saldo atualizado:", saldo);
+        } else {
+          console.log(
+            "Quantidade não é um número válido. Não foi possível atualizar o saldo."
+          );
+        }
       } else {
-        // Trate o caso em que você deseja lidar com saldo negativo ou bloquear a saída se não houver saldo suficiente
-        throw new Error(
-          `Saldo insuficiente para o produto ${produtoId} no estoque ${estoqueId}.`
-        );
+        console.log("Saldo não encontrado. Criando novo saldo.");
+        await Saldo.create({
+          produtoId,
+          estoqueId,
+          subestoqueId,
+          saldo: -quantidade,
+        });
+        console.log("Novo saldo criado.");
       }
-
-      // Atualiza o saldo no estoque
-      const estoque = await Estoque.findByPk(estoqueId);
-      if (!estoque) {
-        throw new Error(`Estoque com id ${estoqueId} não encontrado.`);
-      }
-
-      const novoSaldoEstoque = +estoque.saldo - quantidade;
-      await Estoque.update(
-        { saldo: novoSaldoEstoque },
-        { where: { id: estoqueId } }
-      );
     } catch (error) {
       console.error(error);
       throw new Error(error.message);

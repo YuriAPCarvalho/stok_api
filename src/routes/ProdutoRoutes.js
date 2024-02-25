@@ -27,6 +27,18 @@ router.get("/", async (req, res) => {
   }
 });
 
+router.get("/relatorio", async (req, res) => {
+  try {
+    const { fazenda, local } = req.query;
+   
+    const relatorio = await ProdutoService.gerarRelatorio(fazenda, local);
+
+    res.json(relatorio);
+  } catch (error) {
+    res.status(500).json({ message: "Erro ao gerar relatório.", error: error.message });
+  }
+});
+
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
   try {

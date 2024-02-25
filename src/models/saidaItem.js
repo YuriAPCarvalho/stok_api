@@ -4,6 +4,7 @@ const Usuario = require("./usuario");
 const Estoque = require("./estoque");
 const Solicitante = require("./solicitante");
 const Produto = require("./produto");
+const Subestoque = require("./subestoque");
 
 const SaidaItem = sequelize.define(
   "SaidaItem",
@@ -38,6 +39,14 @@ const SaidaItem = sequelize.define(
       },
       allowNull: false,
     },
+    subestoqueId: {
+      type: DataTypes.INTEGER,
+      references: {
+        model: "Subestoque",
+        key: "id",
+      },
+      allowNull: false,
+    },
     usuarioId: {
       type: DataTypes.INTEGER,
       references: {
@@ -68,11 +77,9 @@ const SaidaItem = sequelize.define(
 
 SaidaItem.belongsTo(Usuario, { foreignKey: "usuarioId", as: "usuario" });
 SaidaItem.belongsTo(Estoque, { foreignKey: "estoqueId", as: "estoque" });
-SaidaItem.belongsTo(Solicitante, {
-  foreignKey: "solicitanteId",
-  as: "solicitante",
-});
+SaidaItem.belongsTo(Solicitante, {  oreignKey: "solicitanteId", as: "solicitante" });
 SaidaItem.belongsTo(Produto, { foreignKey: "produtoId", as: "produto" });
+SaidaItem.belongsTo(Subestoque, { foreignKey: "subestoqueId", as: "subestoque" });
 
 
 
