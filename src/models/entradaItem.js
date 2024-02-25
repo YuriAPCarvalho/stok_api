@@ -1,8 +1,8 @@
 const { DataTypes } = require("sequelize");
 const { sequelize } = require("../config/db");
-const Estoque = require('./estoque')
+const Estoque = require("./estoque");
 const Produto = require("./produto");
-
+const Subestoque = require("./subestoque");
 
 const EntradaItem = sequelize.define(
   "EntradaItem",
@@ -36,8 +36,16 @@ const EntradaItem = sequelize.define(
     estoqueId: {
       type: DataTypes.INTEGER,
       references: {
-        model: 'Estoque', 
-        key: 'id',
+        model: "Estoque",
+        key: "id",
+      },
+      allowNull: false,
+    },
+    subestoqueId: {
+      type: DataTypes.INTEGER,
+      references: {
+        model: "Subestoque",
+        key: "id",
       },
       allowNull: false,
     },
@@ -45,9 +53,9 @@ const EntradaItem = sequelize.define(
   { freezeTableName: true }
 );
 
-EntradaItem.belongsTo(Estoque, { as: 'estoque', foreignKey: 'estoqueId' });
+EntradaItem.belongsTo(Estoque, { as: "estoque", foreignKey: "estoqueId" });
 EntradaItem.belongsTo(Produto, { foreignKey: "produtoId", as: "produto" });
-
+EntradaItem.belongsTo(Subestoque, { as: "subestoque", foreignKey: "subestoqueId" });
 
 
 

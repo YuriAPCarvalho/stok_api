@@ -7,69 +7,51 @@ const Saldo = require("../models/saldo");
 class EntradaItemService {
   async createEntradaItem(entradaItem) {
     try {
-      if (isNaN(entradaItem.produtoId)) {
-        const produto = await Produto.findOne({
-          where: { descricao: entradaItem.produtoId },
-        });
-        if (!produto) {
-          throw new Error(
-            `Produto com descrição ${entradaItem.produtoId} não encontrado.`
-          );
-        }
-        entradaItem.produtoId = produto.id;
-      }
-
-      const newEntradaItem = await EntradaItem.create(entradaItem);
-
-      // Atualiza o saldo no estoque e cria ou atualiza uma entrada na tabela Saldo
+      const createdEntradaItem = await EntradaItem.create(entradaItem);
       await this.atualizarSaldo(
         entradaItem.produtoId,
         entradaItem.estoqueId,
-        entradaItem.quantidade
+        entradaItem.subestoqueId,
+        parseFloat(entradaItem.quantidade)
       );
-
-      return newEntradaItem;
+      return createdEntradaItem;
     } catch (error) {
       console.error(error);
       throw new Error(error.message);
     }
   }
-
-  async atualizarSaldo(produtoId, estoqueId, quantidade) {
+  
+  async atualizarSaldo(produtoId, estoqueId, subestoqueId, quantidade) {
     try {
-      // Verifica se já existe um saldo para o produto no estoque
-      const saldo = await Saldo.findOne({ where: { produtoId, estoqueId } });
-
+      const saldo = await Saldo.findOne({
+        where: {
+          produtoId: produtoId,
+          estoqueId: estoqueId,
+          subestoqueId: subestoqueId,
+        },
+      });
+  
       if (saldo) {
-        // Se já existe um saldo, atualiza a quantidade existente
-        await Saldo.update(
-          {
-            quantidade: Sequelize.literal(`quantidade + ${quantidade}`),
-            saldo: Sequelize.literal(`saldo + ${quantidade}`),
-          },
-          { where: { produtoId, estoqueId } }
-        );
+        console.log('Saldo encontrado:', saldo);
+  
+        // Verifica se a quantidade é um número válido
+        if (!isNaN(quantidade)) {
+          saldo.saldo += quantidade;
+          await saldo.save();
+          console.log('Saldo atualizado:', saldo);
+        } else {
+          console.log('Quantidade não é um número válido. Não foi possível atualizar o saldo.');
+        }
       } else {
-        // Se não existe um saldo, cria uma nova entrada com um valor inicial para o saldo
+        console.log('Saldo não encontrado. Criando novo saldo.');
         await Saldo.create({
           produtoId,
           estoqueId,
-          quantidade,
+          subestoqueId,
           saldo: quantidade,
         });
+        console.log('Novo saldo criado.');
       }
-
-      // Atualiza o saldo no estoque
-      const estoque = await Estoque.findByPk(estoqueId);
-      if (!estoque) {
-        throw new Error(`Estoque com id ${estoqueId} não encontrado.`);
-      }
-
-      const novoSaldoEstoque = +estoque.saldo + quantidade;
-      await Estoque.update(
-        { saldo: novoSaldoEstoque },
-        { where: { id: estoqueId } }
-      );
     } catch (error) {
       console.error(error);
       throw new Error(error.message);

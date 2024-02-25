@@ -1,107 +1,117 @@
-const { Op, literal } = require("sequelize");
-const Sequelize = require("sequelize");
-const Saldo = require("../models/saldo");
+const { Op, literal, QueryTypes, Sequelize } = require("sequelize");
+const { sequelize } = require("../config/db");
+const { Saldo } = require('../models/saldo');
+const Produto = require("../models/produto");
+const Categoria = require("../models/categoria");
+const EntradaItem = require("../models/entradaItem");
+
 
 class SaldoService {
-  async createSaldo(saldo) {
-    try {
-      return await Saldo.create(saldo);
-    } catch (error) {
-      throw new Error(`Erro ao criar saldo: ${error.message}`);
-    }
-  }
 
-  async findSaldos() {
+  async updateSaldo(produtoId, estoqueId, subestoqueId, novoSaldo) {
+    console.log("Entrou em updateSaldo");
+    console.log("produtoId:", produtoId);
+    console.log("estoqueId:", estoqueId);
+    console.log("subestoqueId:", subestoqueId);
+    console.log("novoSaldo:", novoSaldo.saldo);
     try {
-      return await Saldo.findAll({ order: [["updatedAt", "DESC"]] });
-    } catch (error) {
-      throw new Error(`Erro ao buscar saldos: ${error.message}`);
-    }
-  }
+      const sqlQuery = `
+        SELECT
+          s."id"  
+        FROM "Saldo" s
+        WHERE
+          s."produtoId" = :produtoId
+          AND s."estoqueId" = :estoqueId
+          AND s."subestoqueId" = :subestoqueId
+      `;
 
-  async findSaldoById(id) {
-    try {
-      return await Saldo.findByPk(id);
-    } catch (error) {
-      throw new Error(`Erro ao buscar saldo por ID: ${error.message}`);
-    }
-  }
-
-  async updateSaldo(id, saldo) {
-    try {
-      const [updatedRowsCount, [updatedRow]] = await Saldo.update(saldo, {
-        where: { id },
-        returning: true,
+      const saldo = await sequelize.query(sqlQuery, {
+        type: QueryTypes.SELECT,
+        replacements: {
+          produtoId: produtoId,
+          estoqueId: estoqueId,
+          subestoqueId: subestoqueId
+        },
       });
-      if (updatedRowsCount === 0) {
-        throw new Error("Saldo não encontrado");
-      }
-      return updatedRow;
-    } catch (error) {
+      console.log("Saldos encontrados:", saldo);
+
+      const sqlUpdate = `	UPDATE "Saldo" S SET "saldo" = :novoSaldo WHERE s."id" = :id`;
+      const result = await sequelize
+        .query(sqlUpdate, {
+          type: QueryTypes.UPDATE,
+          replacements: {
+            novoSaldo: novoSaldo.saldo,
+            id: saldo[0].id
+          },
+        });
+      console.log("Saldos atualizados:", result);
+      return result;
+    }
+    catch (error) {
       throw new Error(`Erro ao atualizar saldo: ${error.message}`);
     }
   }
 
-  async deleteSaldo(id) {
-    try {
-      const saldo = await Saldo.findByPk(id);
-      if (!saldo) {
-        throw new Error("Saldo não encontrado");
-      }
-      await Saldo.destroy({ where: { id } });
-      return saldo;
-    } catch (error) {
-      throw new Error(`Erro ao excluir saldo: ${error.message}`);
-    }
-  }
-
-  async findLastSaldosByEstoqueId(estoqueId) {
-    try {
-      console.log("Entrou no método findLastSaldosByEstoqueId");
-
-      const result = await Saldo.findAll({
-        attributes: [
-          [Sequelize.literal('DISTINCT ON ("produtoId") id'), "id"],
-          "produtoId",
-          "estoqueId",
-          "saldo",
-          "createdAt",
-          "updatedAt",
-        ],
+    /*  const saldo = await Saldo.findOne({
         where: {
+          produtoId: produtoId,
           estoqueId: estoqueId,
+          subestoqueId: subestoqueId,
         },
-        order: [
-          ["produtoId", "DESC"],
-          ["updatedAt", "DESC"],
-        ],
-      });
+      }); /*
 
-      console.log("Result:", result);
+      if (saldo) {
+  
+        saldo.saldo = isNaN(novoSaldo) ? null : novoSaldo;
+        await saldo.save();
+        return saldo;
+      } else {
 
-      return result;
+        console.error(`Saldo não encontrado para o produto ${produtoId} no estoque ${estoqueId} e subestoque ${subestoqueId}`);
+        return null;
+      }
     } catch (error) {
-      console.error(
-        `Erro ao buscar últimos saldos por estoque ID: ${error.message}`
-      );
+      console.error('Erro ao atualizar saldo:', error);
       throw error;
     }
   }
+  */
 
-  async findSaldosByFilters(estoqueId, produtoId) {
+  async findSaldosByParams(estoqueId, grupo, local) {
     try {
-      const whereClause = {};
-      if (estoqueId) whereClause.estoqueId = estoqueId;
-      if (produtoId) whereClause.produtoId = produtoId;
+      const sqlQuery = `
+select s."produtoId" as "id",
+	   p."fotoProduto",
+	   p."descricao",
+	   s."saldo",
+	   e."descricao" as "descricaoEstoque"
+	   
 
-      return await Saldo.findAll({
-        where: whereClause,
-        order: [["updatedAt", "DESC"]],
+  from "Saldo" s 
+  
+ inner join "Produto" p on s."produtoId" = p."id"
+ inner join "Estoque" e on s."estoqueId" = e."id"
+ 
+ where s."estoqueId" = :estoqueId
+ and p."categoriaId" = :local
+ and s."subestoqueId" = :grupo
+      `;
+  
+      const saldos = await sequelize.query(sqlQuery, {
+        type: QueryTypes.SELECT,
+        replacements: {
+          estoqueId: estoqueId,
+          grupo: grupo,
+          local: local
+        },
       });
+      console.log("Saldos encontrados:", saldos);
+      return saldos;
     } catch (error) {
-      throw new Error(`Erro ao buscar saldos por filtros: ${error.message}`);
+      throw new Error(`Erro ao buscar saldos por parâmetros: ${error.message}`);
     }
   }
+  
 }
 
 module.exports = new SaldoService();

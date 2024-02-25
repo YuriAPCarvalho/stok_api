@@ -1,5 +1,7 @@
 const { DataTypes } = require("sequelize");
 const { sequelize } = require("../config/db");
+const Produto = require("./produto");
+
 
 const Saldo = sequelize.define(
   "Saldo",
@@ -18,6 +20,10 @@ const Saldo = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+    subestoqueId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
     saldo: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -25,5 +31,8 @@ const Saldo = sequelize.define(
   },
   { freezeTableName: true }
 );
+
+Saldo.belongsTo(Produto, { foreignKey: "produtoId", as: "produto" });
+
 
 module.exports = Saldo;
