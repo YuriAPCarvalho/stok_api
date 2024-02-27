@@ -35,6 +35,40 @@ class ProdutoService {
     }
   }
 
+  async findProdutosPaginado(page = 1, perPage = 5) {
+    try {
+      const startIndex = (page - 1) * perPage;
+    
+      const { count, rows: produtos } = await Produto.findAndCountAll({
+        include: [{ model: Categoria, as: "categoria" }],
+        offset: startIndex,
+        limit: perPage,
+        order: [['descricao', 'ASC']],
+      });
+  
+      const totalItems = count;
+      const totalPages = Math.ceil(totalItems / perPage);
+  
+      produtos.forEach((produto) => {
+        if (produto.fotoProduto) {
+          const fotoProdutoBase64 = Buffer.from(produto.fotoProduto).toString(
+            "base64"
+          );
+          produto.fotoProduto = `data:${produto.mimeType};base64,${fotoProdutoBase64}`;
+        }
+      });
+  
+      return {
+        produtos,
+        totalItems,
+        totalPages,
+      };
+    } catch (error) {
+      console.error(error);
+      throw new Error(error.message);
+    }
+  }
+
   async findProdutoById(id) {
     try {
       const produto = await Produto.findByPk(id, {

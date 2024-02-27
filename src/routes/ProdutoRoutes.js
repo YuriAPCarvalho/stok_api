@@ -18,7 +18,19 @@ router.post("/", upload.single("fotoProduto"), async (req, res) => {
   }
 });
 
+router.get("/paginado", async (req, res) => {
+  console.log('paginado');
+  try {
+    const { page, perPage } = req.query; 
+    const result = await ProdutoService.findProdutosPaginado(page, perPage);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ message: "Erro ao buscar produtos.", error });
+  }
+});
+
 router.get("/", async (req, res) => {
+  console.log('get');
   try {
     const result = await ProdutoService.findProdutos();
     res.json(result);
@@ -26,6 +38,8 @@ router.get("/", async (req, res) => {
     res.status(500).json({ message: "Erro ao buscar produtos.", error });
   }
 });
+
+
 
 router.get("/relatorio", async (req, res) => {
   try {
