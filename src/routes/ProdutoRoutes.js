@@ -29,6 +29,16 @@ router.get("/paginado", async (req, res) => {
   }
 });
 
+router.get("/descricao", async (req, res) => {
+  console.log('get descricao');
+  try {
+    const result = await ProdutoService.findDescricoes();
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ message: "Erro ao buscar descrições.", error });
+  }
+});
+
 router.get("/", async (req, res) => {
   console.log('get');
   try {

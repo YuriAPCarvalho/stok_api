@@ -80,6 +80,20 @@ class ProdutoService {
     }
   }
 
+  async findDescricoes() {
+    try {
+      const descricoes = await Produto.findAll({
+        attributes: ['id','descricao'],
+        order: [['descricao', 'ASC']],
+      });
+  
+      return descricoes;
+    } catch (error) {
+      console.error(error);
+      throw new Error(error.message);
+    }
+  }
+
   async updateProduto(id, produto) {
     try {
       const [updatedRowsCount, updatedRows] = await Produto.update(produto, {

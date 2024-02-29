@@ -52,34 +52,68 @@ class SaldoService {
     }
   }
 
-    /*  const saldo = await Saldo.findOne({
-        where: {
-          produtoId: produtoId,
-          estoqueId: estoqueId,
-          subestoqueId: subestoqueId,
-        },
-      }); /*
+  /*  const saldo = await Saldo.findOne({
+      where: {
+        produtoId: produtoId,
+        estoqueId: estoqueId,
+        subestoqueId: subestoqueId,
+      },
+    }); /*
 
-      if (saldo) {
-  
-        saldo.saldo = isNaN(novoSaldo) ? null : novoSaldo;
-        await saldo.save();
-        return saldo;
-      } else {
+    if (saldo) {
+ 
+      saldo.saldo = isNaN(novoSaldo) ? null : novoSaldo;
+      await saldo.save();
+      return saldo;
+    } else {
 
-        console.error(`Saldo não encontrado para o produto ${produtoId} no estoque ${estoqueId} e subestoque ${subestoqueId}`);
-        return null;
-      }
-    } catch (error) {
-      console.error('Erro ao atualizar saldo:', error);
-      throw error;
+      console.error(`Saldo não encontrado para o produto ${produtoId} no estoque ${estoqueId} e subestoque ${subestoqueId}`);
+      return null;
     }
+  } catch (error) {
+    console.error('Erro ao atualizar saldo:', error);
+    throw error;
   }
-  */
+}
+*/
 
   async findSaldosByParams(estoqueId, grupo, local) {
     try {
-      const sqlQuery = `
+      const replacements = {};
+      let whereClause = "";
+      if (estoqueId && grupo && local) {
+        whereClause += `where s."estoqueId" = :estoqueId and s."subestoqueId" = :grupo and p."categoriaId" = :local`;
+        replacements.estoqueId = estoqueId;
+        replacements.grupo = grupo;
+        replacements.local = local;
+      } else if (estoqueId && grupo) {
+        whereClause += `where s."estoqueId" = :estoqueId and s."subestoqueId" = :grupo`;
+        replacements.estoqueId = estoqueId;
+        replacements.grupo = grupo;
+      } else if (estoqueId && local) {
+        whereClause += `where s."estoqueId" = :estoqueId and p."categoriaId" = :local`;
+        replacements.estoqueId = estoqueId;
+        replacements.local = local;
+      }
+      else if (grupo && local) {
+        whereClause += `where s."subestoqueId" = :grupo and p."categoriaId" = :local`;
+        replacements.grupo = grupo;
+        replacements.local = local;
+      }
+      else if (estoqueId) {
+        whereClause += `where s."estoqueId" = :estoqueId`;
+        replacements.estoqueId = estoqueId;
+      }
+      else if (grupo) {
+        whereClause += `where s."subestoqueId" = :grupo`;
+        replacements.grupo = grupo;
+      }
+      else if (local) {
+        whereClause += `where p."categoriaId" = :local`;
+        replacements.local = local;
+      }
+
+      const sqlQuery = await sequelize.query(`
 select s."produtoId" as "id",
 	   p."fotoProduto",
 	   p."descricao",
@@ -91,27 +125,17 @@ select s."produtoId" as "id",
   
  inner join "Produto" p on s."produtoId" = p."id"
  inner join "Estoque" e on s."estoqueId" = e."id"
- 
- where s."estoqueId" = :estoqueId
- and p."categoriaId" = :local
- and s."subestoqueId" = :grupo
-      `;
-  
-      const saldos = await sequelize.query(sqlQuery, {
+ ${whereClause}`, {
         type: QueryTypes.SELECT,
-        replacements: {
-          estoqueId: estoqueId,
-          grupo: grupo,
-          local: local
-        },
+        replacements: replacements
       });
-      console.log("Saldos encontrados:", saldos);
-      return saldos;
+
+      return sqlQuery;
     } catch (error) {
-      throw new Error(`Erro ao buscar saldos por parâmetros: ${error.message}`);
+      throw new Error(error.message);
     }
   }
-  
 }
+
 
 module.exports = new SaldoService();
