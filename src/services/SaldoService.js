@@ -114,17 +114,22 @@ class SaldoService {
       }
 
       const sqlQuery = await sequelize.query(`
-select s."produtoId" as "id",
-	   p."fotoProduto",
-	   p."descricao",
-	   s."saldo",
-	   e."descricao" as "descricaoEstoque"
-	   
-
-  from "Saldo" s 
-  
- inner join "Produto" p on s."produtoId" = p."id"
- inner join "Estoque" e on s."estoqueId" = e."id"
+      select s."produtoId" as "id",
+      p."fotoProduto",
+      p."descricao",
+      s."saldo",
+      e."descricao" as "descricaoEstoque",
+      sb."descricao" as "descricaoLocal",
+      c."descricao" as "descricaoCategoria"
+      
+      
+ 
+   from "Saldo" s 
+   
+  inner join "Produto" p on s."produtoId" = p."id"
+  inner join "Estoque" e on s."estoqueId" = e."id"
+  inner join "Subestoque" sb  on s."subestoqueId" = sb."id"
+  inner join "Categoria" c on c."id" = p."categoriaId"
  ${whereClause}`, {
         type: QueryTypes.SELECT,
         replacements: replacements
